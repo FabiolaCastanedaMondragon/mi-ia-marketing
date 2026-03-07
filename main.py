@@ -7,13 +7,12 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Cargamos los archivos
 scaler = joblib.load('scaler.pkl')
 kmeans = joblib.load('kmeans_model.pkl')
 autoencoder = tf.keras.models.load_model('modelo_ia.h5', compile=False)
 
+# Quitamos ORDERLINENUMBER para que sean 37 columnas
 class DatosVenta(BaseModel):
-    ORDERLINENUMBER: float = 0
     QUANTITYORDERED: float = 0
     PRICEEACH: float = 0
     MSRP: float = 0
@@ -54,22 +53,17 @@ class DatosVenta(BaseModel):
 
 @app.get("/")
 def inicio():
-    return {"mensaje": "Microservicio funcionando correctamente"}
+    return {"mensaje": "Microservicio activo - Ajuste de 37 columnas"}
 
 @app.post("/predecir")
 def predecir(datos: DatosVenta):
     try:
-        # 1. Convertir a lista de valores en el orden exacto
         valores = list(datos.dict().values())
-        
-        # 2. Convertir a array de numpy (sin nombres de columnas para evitar errores)
         X = np.array([valores])
         
-        # 3. Escalado (Usamos el array directamente)
-        # Nota: El scaler fue entrenado con 38 columnas. Asegúrate de que coincidan.
+        # Ahora X tiene exactamente 37 columnas
         datos_escalados = scaler.transform(X)
         
-        # 4. Predicción
         grupo = kmeans.predict(datos_escalados)
         
         return {
