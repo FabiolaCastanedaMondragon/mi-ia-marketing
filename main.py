@@ -11,7 +11,6 @@ scaler = joblib.load('scaler.pkl')
 kmeans = joblib.load('kmeans_model.pkl')
 autoencoder = tf.keras.models.load_model('modelo_ia.h5', compile=False)
 
-# Estructura completa según tu último error
 class DatosVenta(BaseModel):
     ORDERLINENUMBER: float = 0
     QUANTITYORDERED: float = 0
@@ -19,10 +18,9 @@ class DatosVenta(BaseModel):
     MSRP: float = 0
     SALES: float = 0
     MONTH_ID: float = 0
-    YEAR_ID: float = 0  # <--- Agregada
-    PRODUCTCODE: float = 0 # <--- Agregada
+    YEAR_ID: float = 0
+    PRODUCTCODE: float = 0
     DAYS_SINCE_LASTORDER: float = 0
-    # Países
     Australia: float = 0
     Austria: float = 0
     Belgium: float = 0
@@ -42,7 +40,6 @@ class DatosVenta(BaseModel):
     Switzerland: float = 0
     UK: float = 0
     USA: float = 0
-    # Categorías
     Classic_Cars: float = 0
     Motorcycles: float = 0
     Planes: float = 0
@@ -50,7 +47,6 @@ class DatosVenta(BaseModel):
     Trains: float = 0
     Trucks_and_Buses: float = 0
     Vintage_Cars: float = 0
-    # Tamaños
     Large: float = 0
     Medium: float = 0
     Small: float = 0
@@ -65,15 +61,22 @@ def predecir(datos: DatosVenta):
         data_dict = datos.dict()
         df = pd.DataFrame([data_dict])
         
-        # AJUSTE DE NOMBRES EXACTOS (Como en el Scaler de tu Colab)
-        mapeo = {
-            'Classic_Cars': 'Classic Cars',
-            'Trucks_and_Buses': 'Trucks and Buses',
-            'Vintage_Cars': 'Vintage Cars',
-            'DAYS_SINCE_LASTORDER': 'DAYS SINCE LASTORDER'
-        }
-        df = df.rename(columns=mapeo)
+        # --- ESTA ES LA PARTE CLAVE ---
+        # El scaler espera los nombres EXACTOS de las columnas de tu Excel/CSV original
+        columnas_finales = [
+            'ORDERLINENUMBER', 'QUANTITYORDERED', 'PRICEEACH', 'MSRP', 'SALES', 
+            'MONTH_ID', 'YEAR_ID', 'PRODUCTCODE', 'DAYS SINCE LASTORDER', # <--- Sin guion bajo
+            'Australia', 'Austria', 'Belgium', 'Canada', 'Denmark', 'Finland', 
+            'France', 'Germany', 'Ireland', 'Italy', 'Japan', 'Norway', 
+            'Philippines', 'Singapore', 'Spain', 'Sweden', 'Switzerland', 
+            'UK', 'USA', 'Classic Cars', 'Motorcycles', 'Planes', 'Ships', 
+            'Trains', 'Trucks and Buses', 'Vintage Cars', 'Large', 'Medium', 'Small'
+        ]
         
+        # Forzamos los nombres de las columnas al DataFrame
+        df.columns = columnas_finales
+        # ------------------------------
+
         # 1. Escalado
         datos_escalados = scaler.transform(df)
         
