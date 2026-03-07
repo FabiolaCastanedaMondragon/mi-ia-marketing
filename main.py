@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 import joblib
 import pandas as pd
+import numpy as np
 import tensorflow as tf
 from pydantic import BaseModel
 
 app = FastAPI()
 
-# Cargamos tus archivos
+# Cargamos los archivos
 scaler = joblib.load('scaler.pkl')
 kmeans = joblib.load('kmeans_model.pkl')
 autoencoder = tf.keras.models.load_model('modelo_ia.h5', compile=False)
@@ -53,34 +54,22 @@ class DatosVenta(BaseModel):
 
 @app.get("/")
 def inicio():
-    return {"mensaje": "Microservicio de Segmentación Activo"}
+    return {"mensaje": "Microservicio funcionando correctamente"}
 
 @app.post("/predecir")
 def predecir(datos: DatosVenta):
     try:
-        data_dict = datos.dict()
-        df = pd.DataFrame([data_dict])
+        # 1. Convertir a lista de valores en el orden exacto
+        valores = list(datos.dict().values())
         
-        # --- ESTA ES LA PARTE CLAVE ---
-        # El scaler espera los nombres EXACTOS de las columnas de tu Excel/CSV original
-        columnas_finales = [
-            'ORDERLINENUMBER', 'QUANTITYORDERED', 'PRICEEACH', 'MSRP', 'SALES', 
-            'MONTH_ID', 'YEAR_ID', 'PRODUCTCODE', 'DAYS SINCE LASTORDER', # <--- Sin guion bajo
-            'Australia', 'Austria', 'Belgium', 'Canada', 'Denmark', 'Finland', 
-            'France', 'Germany', 'Ireland', 'Italy', 'Japan', 'Norway', 
-            'Philippines', 'Singapore', 'Spain', 'Sweden', 'Switzerland', 
-            'UK', 'USA', 'Classic Cars', 'Motorcycles', 'Planes', 'Ships', 
-            'Trains', 'Trucks and Buses', 'Vintage Cars', 'Large', 'Medium', 'Small'
-        ]
+        # 2. Convertir a array de numpy (sin nombres de columnas para evitar errores)
+        X = np.array([valores])
         
-        # Forzamos los nombres de las columnas al DataFrame
-        df.columns = columnas_finales
-        # ------------------------------
-
-        # 1. Escalado
-        datos_escalados = scaler.transform(df)
+        # 3. Escalado (Usamos el array directamente)
+        # Nota: El scaler fue entrenado con 38 columnas. Asegúrate de que coincidan.
+        datos_escalados = scaler.transform(X)
         
-        # 2. Predicción
+        # 4. Predicción
         grupo = kmeans.predict(datos_escalados)
         
         return {
