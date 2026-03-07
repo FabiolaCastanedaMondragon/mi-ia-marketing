@@ -9,7 +9,7 @@ app = FastAPI()
 # Cargamos los cerebros que descargaste
 scaler = joblib.load('scaler.pkl')
 kmeans = joblib.load('kmeans_model.pkl')
-model = tf.keras.models.load_model('modelo_ia.h5')
+model = tf.keras.models.load_model('modelo_ia.h5', compile=False)
 
 @app.get("/")
 def inicio():
