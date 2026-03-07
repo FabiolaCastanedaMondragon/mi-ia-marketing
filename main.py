@@ -11,7 +11,7 @@ scaler = joblib.load('scaler.pkl')
 kmeans = joblib.load('kmeans_model.pkl')
 autoencoder = tf.keras.models.load_model('modelo_ia.h5', compile=False)
 
-# Definimos la estructura exacta con TODAS las piezas que pide tu modelo
+# Estructura completa según tu último error
 class DatosVenta(BaseModel):
     ORDERLINENUMBER: float = 0
     QUANTITYORDERED: float = 0
@@ -19,6 +19,8 @@ class DatosVenta(BaseModel):
     MSRP: float = 0
     SALES: float = 0
     MONTH_ID: float = 0
+    YEAR_ID: float = 0  # <--- Agregada
+    PRODUCTCODE: float = 0 # <--- Agregada
     DAYS_SINCE_LASTORDER: float = 0
     # Países
     Australia: float = 0
@@ -48,38 +50,34 @@ class DatosVenta(BaseModel):
     Trains: float = 0
     Trucks_and_Buses: float = 0
     Vintage_Cars: float = 0
-    # Tamaños (Estas son las que faltaban)
+    # Tamaños
     Large: float = 0
     Medium: float = 0
     Small: float = 0
 
 @app.get("/")
 def inicio():
-    return {"mensaje": "Microservicio de Segmentación de Ventas Activo"}
+    return {"mensaje": "Microservicio de Segmentación Activo"}
 
 @app.post("/predecir")
 def predecir(datos: DatosVenta):
     try:
-        # Convertir a diccionario
         data_dict = datos.dict()
-        
-        # Crear DataFrame
         df = pd.DataFrame([data_dict])
         
-        # REGLA DE ORO: Los nombres deben ser EXACTOS a como se entrenaron
-        # Cambiamos guiones bajos por espacios donde el modelo lo necesite
-        mapeo_nombres = {
+        # AJUSTE DE NOMBRES EXACTOS (Como en el Scaler de tu Colab)
+        mapeo = {
             'Classic_Cars': 'Classic Cars',
             'Trucks_and_Buses': 'Trucks and Buses',
             'Vintage_Cars': 'Vintage Cars',
             'DAYS_SINCE_LASTORDER': 'DAYS SINCE LASTORDER'
         }
-        df = df.rename(columns=mapeo_nombres)
+        df = df.rename(columns=mapeo)
         
         # 1. Escalado
         datos_escalados = scaler.transform(df)
         
-        # 2. Predicción de Cluster
+        # 2. Predicción
         grupo = kmeans.predict(datos_escalados)
         
         return {
