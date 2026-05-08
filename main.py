@@ -5,7 +5,7 @@ import numpy as np
 
 app = FastAPI(title="Predicción de Segmentos de Venta")
 
-# Configuración de CORS
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,13 +42,24 @@ async def predecir(body: dict):
         valores = []
         for k in claves:
             valor = body.get(k)
+            
             if k == "PRODUCTCODE":
-                valores.append(str(valor) if valor is not None else "")   # Mantener como string
+                # Convertir a string normal
+                valores.append(str(valor).strip() if valor is not None else "")
             else:
-                valores.append(float(valor) if valor is not None else 0.0)
+                # Convertir a float de forma segura
+                try:
+                    valores.append(float(valor) if valor is not None else 0.0)
+                except (ValueError, TypeError):
+                    valores.append(0.0)
         
-        X = np.array([valores])
-        X_scaled = scaler.transform(X)
+        # Convertir a array numpy
+        X = np.array([valores], dtype=object)
+        
+        # Convertir solo las columnas numéricas para el scaler
+        X_numeric = np.array([valores[0:7] + valores[8:]], dtype=float)  # excluyendo PRODUCTCODE
+        
+        X_scaled = scaler.transform(X_numeric)
         grupo = kmeans.predict(X_scaled)
        
         return {
@@ -59,7 +70,7 @@ async def predecir(body: dict):
     except Exception as e:
         return {
             "error": str(e),
-            "detalle": "Revisa que todas las claves numéricas estén enviadas correctamente"
+            "detalle": "Error al procesar los datos"
         }
 
 
