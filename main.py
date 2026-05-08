@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import joblib
 import pandas as pd
 import numpy as np
@@ -7,11 +8,22 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
+# --- CONFIGURACIÓN DE SEGURIDAD (CORS) ---
+# Esto elimina el error 403 Forbidden al permitir que n8n se conecte
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Carga de modelos
 scaler = joblib.load('scaler.pkl')
 kmeans = joblib.load('kmeans_model.pkl')
 autoencoder = tf.keras.models.load_model('modelo_ia.h5', compile=False)
 
-# Quitamos ORDERLINENUMBER para que sean 37 columnas
+# Esquema de datos (37 columnas)
 class DatosVenta(BaseModel):
     QUANTITYORDERED: float = 0
     PRICEEACH: float = 0
@@ -53,17 +65,17 @@ class DatosVenta(BaseModel):
 
 @app.get("/")
 def inicio():
-    return {"mensaje": "Microservicio activo - Ajuste de 37 columnas"}
+    return {"mensaje": "Microservicio activo - Acceso CORS habilitado"}
 
 @app.post("/predecir")
 def predecir(datos: DatosVenta):
     try:
+        # Convertimos los datos recibidos a una lista de valores
         valores = list(datos.dict().values())
         X = np.array([valores])
         
-        # Ahora X tiene exactamente 37 columnas
+        # Escalado y predicción
         datos_escalados = scaler.transform(X)
-        
         grupo = kmeans.predict(datos_escalados)
         
         return {
