@@ -5,7 +5,7 @@ import numpy as np
 
 app = FastAPI(title="Predicción de Segmentos de Venta")
 
-# Configuración de CORS (permite todo para evitar problemas con n8n)
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -39,8 +39,13 @@ async def predecir(body: dict):
             "Ships", "Trains", "Trucks_and_Buses", "Vintage_Cars", "Large", "Medium", "Small"
         ]
        
-        # Convertir los valores (0 por defecto si no existe la clave)
-        valores = [float(body.get(k, 0)) for k in claves]
+        valores = []
+        for k in claves:
+            valor = body.get(k)
+            if k == "PRODUCTCODE":
+                valores.append(str(valor) if valor is not None else "")   # Mantener como string
+            else:
+                valores.append(float(valor) if valor is not None else 0.0)
         
         X = np.array([valores])
         X_scaled = scaler.transform(X)
@@ -54,11 +59,10 @@ async def predecir(body: dict):
     except Exception as e:
         return {
             "error": str(e),
-            "detalle": "Revisa que estés enviando todas las claves como números y en formato JSON correcto"
+            "detalle": "Revisa que todas las claves numéricas estén enviadas correctamente"
         }
 
 
-# Opcional: Para aceptar GET también (útil para pruebas)
 @app.get("/predecir")
 async def predecir_get():
     return {"error": "Este endpoint solo acepta POST", "ayuda": "Usa POST desde n8n"}
