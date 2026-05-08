@@ -1,15 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import joblib
 import pandas as pd
 import numpy as np
 import tensorflow as tf
 from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
 # --- CONFIGURACIÓN DE SEGURIDAD (CORS) ---
-# Esto elimina el error 403 Forbidden al permitir que n8n se conecte
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,9 +19,12 @@ app.add_middleware(
 )
 
 # Carga de modelos
-scaler = joblib.load('scaler.pkl')
-kmeans = joblib.load('kmeans_model.pkl')
-autoencoder = tf.keras.models.load_model('modelo_ia.h5', compile=False)
+try:
+    scaler = joblib.load('scaler.pkl')
+    kmeans = joblib.load('kmeans_model.pkl')
+    # autoencoder = tf.keras.models.load_model('modelo_ia.h5', compile=False) # Solo si lo usas
+except Exception as e:
+    print(f"Error cargando modelos: {e}")
 
 # Esquema de datos (37 columnas)
 class DatosVenta(BaseModel):
@@ -67,11 +70,22 @@ class DatosVenta(BaseModel):
 def inicio():
     return {"mensaje": "Microservicio activo - Acceso CORS habilitado"}
 
-@app.post("/predecir")
-def predecir(datos: DatosVenta):
+# --- RUTA CORREGIDA CON API_ROUTE PARA EVITAR ERROR 405 ---
+@app.api_route("/predecir", methods=["GET", "POST", "OPTIONS"])
+async def predecir(datos: Optional[DatosVenta] = None, request: Request = None):
+    # Si la petición llega vacía o es un GET por error de redirección
+    if request.method == "GET":
+        return {"error": "Se recibió un GET. n8n debe enviar un POST a /predecir sin barra final."}
+    
     try:
         # Convertimos los datos recibidos a una lista de valores
-        valores = list(datos.dict().values())
+        cuerpo = await request.json()
+        valores = list(cuerpo.values())
+        
+        # Validar que tengamos las 37 columnas
+        if len(valores) != 37:
+            return {"error": f"Se esperaban 37 columnas, llegaron {len(valores)}", "status": "Error"}
+
         X = np.array([valores])
         
         # Escalado y predicción
@@ -80,7 +94,8 @@ def predecir(datos: DatosVenta):
         
         return {
             "segmento_venta": int(grupo[0]),
-            "status": "Exitoso"
+            "status": "Exitoso",
+            "metodo_recibido": request.method
         }
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "status": "Fallido"}
